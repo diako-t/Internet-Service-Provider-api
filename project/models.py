@@ -36,6 +36,7 @@ class ServicePlan(Base):
     service_id = Column(Integer, ForeignKey("services.id", ondelete="CASCADE"), nullable=False)
     price = Column(Numeric(10,2), nullable=False)
     duration_days = Column(Integer, nullable=False)
+    traffic = Column(Numeric(10,2), nullable=True)
     status = Column(Boolean, nullable=False, default=True)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
 
@@ -117,6 +118,7 @@ class Subscription(Base):
     item_id = Column(Integer, ForeignKey("order_items.id"), nullable=False, unique=True)
     start_date = Column(TIMESTAMP(timezone=True), nullable=False)
     end_date = Column(TIMESTAMP(timezone=True), nullable=False)
+    total_traffic = Column(Numeric(10,2), nullable=True)
     status = Column(String(50), default="active", nullable=False)
     auto_renew = Column(Boolean, default=False, nullable=False)
 

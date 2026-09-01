@@ -16,7 +16,7 @@ def get_subscriptions_by_admin(user_id : Optional[int] = None, active : Optional
     result = []
     for sub in subscriptions:
         item = sub.order_item
-        result.append({"id":sub.id, "service_name":item.plan.service.name, "plan_id":item.plan_id, "duration_days":item.plan.duration_days, "start_date":sub.start_date, "end_date":sub.end_date, "status":sub.status, "auto_renew":sub.auto_renew, "user_id":item.order.user_id})
+        result.append({"id":sub.id, "service_name":item.plan.service.name, "plan_id":item.plan_id, "total_traffic":sub.total_traffic, "start_date":sub.start_date, "end_date":sub.end_date, "status":sub.status, "auto_renew":sub.auto_renew, "user_id":item.order.user_id})
     return result
 
 @router.get("/", response_model=List[schemas.SubscriptionsResponse])
@@ -28,7 +28,7 @@ def get_subscriptions(active : Optional[str] = None, db : Session = Depends(data
     result = []
     for sub in subscriptions:
         item = sub.order_item
-        result.append({"id":sub.id, "service_name":item.plan.service.name, "plan_id":item.plan_id, "duration_days":item.plan.duration_days, "start_date":sub.start_date, "end_date":sub.end_date, "status":sub.status, "auto_renew":sub.auto_renew})
+        result.append({"id":sub.id, "service_name":item.plan.service.name, "plan_id":item.plan_id, "total_traffic":sub.total_traffic, "start_date":sub.start_date, "end_date":sub.end_date, "status":sub.status, "auto_renew":sub.auto_renew})
     return result
 
 @router.get("/{subscription_id}", response_model=schemas.SubscriptionsResponse)
@@ -37,7 +37,7 @@ def get_subscription(subscription_id : int, db : Session = Depends(database.get_
     if not subscription:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="subscription not found")
     item = subscription.order_item
-    return {"id":subscription.id, "service_name":item.plan.service.name, "plan_id":item.plan_id, "duration_days":item.plan.duration_days, "start_date":subscription.start_date, "end_date":subscription.end_date, "status":subscription.status, "auto_renew":subscription.auto_renew}
+    return {"id":subscription.id, "service_name":item.plan.service.name, "plan_id":item.plan_id, "total_traffic":subscription.total_traffic, "start_date":subscription.start_date, "end_date":subscription.end_date, "status":subscription.status, "auto_renew":subscription.auto_renew}
 
 @router.patch("/{subscription_id}", response_model=schemas.SubscriptionsResponse)
 def subscription_update(subscription_id : int, data : schemas.SubscriptionUpdate, db : Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
@@ -50,7 +50,7 @@ def subscription_update(subscription_id : int, data : schemas.SubscriptionUpdate
     db.commit()
     db.refresh(subscription)
     item = subscription.order_item
-    return {"id":subscription.id, "service_name":item.plan.service.name, "plan_id":item.plan_id, "duration_days":item.plan.duration_days, "start_date":subscription.start_date, "end_date":subscription.end_date, "status":subscription.status, "auto_renew":subscription.auto_renew}
+    return {"id":subscription.id, "service_name":item.plan.service.name, "plan_id":item.plan_id, "total_traffic":subscription.total_traffic, "start_date":subscription.start_date, "end_date":subscription.end_date, "status":subscription.status, "auto_renew":subscription.auto_renew}
 
 @router.patch("/{subscription_id}/cancel", response_model=schemas.SubscriptionsResponse)
 def subscription_delete(subscription_id : int, db : Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
@@ -64,4 +64,4 @@ def subscription_delete(subscription_id : int, db : Session = Depends(database.g
     db.commit()
     db.refresh(subscription)
     item = subscription.order_item
-    return {"id":subscription.id, "service_name":item.plan.service.name, "plan_id":item.plan_id, "duration_days":item.plan.duration_days, "start_date":subscription.start_date, "end_date":subscription.end_date, "status":subscription.status, "auto_renew":subscription.auto_renew}
+    return {"id":subscription.id, "service_name":item.plan.service.name, "plan_id":item.plan_id, "total_traffic":subscription.total_traffic, "start_date":subscription.start_date, "end_date":subscription.end_date, "status":subscription.status, "auto_renew":subscription.auto_renew}

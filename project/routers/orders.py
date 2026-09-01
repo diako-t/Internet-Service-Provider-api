@@ -39,7 +39,7 @@ def get_cart(db : Session = Depends(database.get_db), current_user : models.User
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="cart is empty")
     items = []
     for item in order.order_items:
-        items.append({"id":item.id, "plan_id":item.plan_id, "service_name":item.plan.service.name, "duration_days":item.plan.duration_days, "unit_price":item.unit_price, "quantity":item.quantity})
+        items.append({"id":item.id, "plan_id":item.plan_id, "service_name":item.plan.service.name, "duration_days":item.plan.duration_days, "traffic":item.plan.traffic, "unit_price":item.unit_price, "quantity":item.quantity})
     return {"id":order.id, "total_amount":order.total_amount, "discount":order.discount, "status":order.status, "items":items}
 
 @router.put("/items/{item_id}", response_model=schemas.OrderResponse)
@@ -93,7 +93,7 @@ def get_orders_by_admin(user_id : Optional[int] = None, limit : int = 10, offset
     for order in orders:
         items = []
         for item in order.order_items:
-            items.append({"id":item.id, "plan_id":item.plan_id, "service_name":item.plan.service.name, "duration_days":item.plan.duration_days, "unit_price":item.unit_price, "quantity":item.quantity})
+            items.append({"id":item.id, "plan_id":item.plan_id, "service_name":item.plan.service.name, "duration_days":item.plan.duration_days, "traffic":item.plan.traffic, "unit_price":item.unit_price, "quantity":item.quantity})
         result.append({"id":order.id, "total_amount":order.total_amount, "discount":order.discount, "status":order.status, "items":items})
     return result
 
@@ -104,7 +104,7 @@ def get_orders(db :Session = Depends(database.get_db), current_user : models.Use
     for order in orders:
         items = []
         for item in order.order_items:
-            items.append({"id":item.id, "plan_id":item.plan_id, "service_name":item.plan.service.name, "duration_days":item.plan.duration_days, "unit_price":item.unit_price, "quantity":item.quantity})
+            items.append({"id":item.id, "plan_id":item.plan_id, "service_name":item.plan.service.name, "duration_days":item.plan.duration_days, "traffic":item.plan.traffic, "unit_price":item.unit_price, "quantity":item.quantity})
         result.append({"id":order.id, "total_amount":order.total_amount, "discount":order.discount, "status":order.status, "items":items})
     return result
 
@@ -115,7 +115,7 @@ def get_order(order_id : int, db :Session = Depends(database.get_db), current_us
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="order not found")
     items = []
     for item in order.order_items:
-        items.append({"id":item.id, "plan_id":item.plan_id, "service_name":item.plan.service.name, "duration_days":item.plan.duration_days, "unit_price":item.unit_price, "quantity":item.quantity})
+        items.append({"id":item.id, "plan_id":item.plan_id, "service_name":item.plan.service.name, "duration_days":item.plan.duration_days, "traffic":item.plan.traffic, "unit_price":item.unit_price, "quantity":item.quantity})
     return {"id":order.id, "total_amount":order.total_amount, "discount":order.discount, "status":order.status, "items":items}
 
 @router.post("/{order_id}/checkout", response_model=schemas.TransactionResponse)

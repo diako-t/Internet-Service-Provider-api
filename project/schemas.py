@@ -58,6 +58,7 @@ class PlanBase(BaseModel):
     service_id : int
     price : float
     duration_days : int
+    traffic : float | None
     status : Optional[bool] = True
 
 class PlanServiceResponse(BaseModel):
@@ -67,6 +68,7 @@ class PlanResponse(BaseModel):
     id : int
     price : float
     duration_days : int
+    traffic : float | None
     status : Optional[bool] = True
     service : PlanServiceResponse
 
@@ -122,7 +124,7 @@ class SubscriptionsResponse(BaseModel):
     id : int
     service_name : str
     plan_id : int
-    duration_days : int
+    total_traffic : float | None
     start_date : datetime
     end_date : datetime
     status : str

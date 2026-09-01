@@ -43,7 +43,9 @@ def test_payment(transaction_id : int, data : schemas.PaymentTest, db : Session 
         now = datetime.now(timezone.utc)
         for item in order.order_items:
             duration = item.plan.duration_days * item.quantity
-            sub = models.Subscription(item_id=item.id, start_date=now, end_date=now+timedelta(days=duration), status="active", auto_renew=False)
+            if item.plan.traffic is not None:
+                traffic = item.plan.traffic * item.quantity
+            sub = models.Subscription(item_id=item.id, start_date=now, end_date=now+timedelta(days=duration), total_traffic=traffic, status="active", auto_renew=False)
             db.add(sub)
         order.status = "completed"
     else:
