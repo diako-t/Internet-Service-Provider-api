@@ -20,9 +20,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     op.alter_column("users", "password", existing_type=sa.String(length=80), type_=sa.Text(), existing_nullable=False)
-    pass
 
 
 def downgrade() -> None:
     op.alter_column("users", "password", existing_type=sa.Text(), type_=sa.String(length=80), existing_nullable=False)
-    pass

@@ -73,12 +73,14 @@ class Order(Base):
 
     id = Column(Integer, primary_key=True, nullable=False)
     user_id = Column(Integer, ForeignKey("users.id",ondelete="CASCADE"), nullable=False)
-    discount = Column(Numeric(10,2), default=0.00)
+    discount = Column(Numeric(10,2), default=0)
+    
     order_date = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
     status = Column(String(50), nullable=False, default="pending")
+    total_amount = Column(Numeric(10, 2), nullable=False)
 
     user = relationship("User", back_populates="orders")
-    order_items = relationship("OrderItem", back_populates="order")
+    order_items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
     transactions = relationship("Transaction", back_populates="order")
 
 
@@ -87,7 +89,7 @@ class OrderItem(Base):
 
     id = Column(Integer, primary_key=True, nullable=False)
     order_id = Column(Integer, ForeignKey("orders.id",ondelete="CASCADE"), nullable=False)
-    plan_id = Column(Integer, ForeignKey("plans.id",ondelete="CASCADE"), nullable=False)
+    plan_id = Column(Integer, ForeignKey("plans.id"), nullable=False)
     unit_price = Column(Numeric(10,2), nullable=False)
     quantity = Column(Integer, default=1, nullable=False)
 
@@ -102,9 +104,9 @@ class Transaction(Base):
     order_id = Column(Integer, ForeignKey("orders.id",ondelete="CASCADE"), nullable=False)
     amount = Column(Numeric(10, 2), nullable=False)
     gateway = Column(String(50), nullable=False)
-    track_code = Column(String(100), nullable=False, unique=True)
+    track_code = Column(String(100), nullable=True, unique=True)
     status = Column(String(20), default="pending", nullable=False)
-    payment_time = Column(TIMESTAMP(timezone=True), server_default=text("now()"))
+    payment_time = Column(TIMESTAMP(timezone=True), nullable=True)
 
     order = relationship("Order", back_populates="transactions")
 
@@ -112,7 +114,7 @@ class Subscription(Base):
     __tablename__ = "subscriptions"
 
     id = Column(Integer, primary_key=True, nullable=False)
-    item_id = Column(Integer, ForeignKey("order_items.id",ondelete="CASCADE"), nullable=False)
+    item_id = Column(Integer, ForeignKey("order_items.id"), nullable=False)
     start_date = Column(TIMESTAMP(timezone=True), nullable=False)
     end_date = Column(TIMESTAMP(timezone=True), nullable=False)
     status = Column(String(50), default="active", nullable=False)

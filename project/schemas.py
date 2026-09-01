@@ -1,5 +1,6 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional
+from pydantic import BaseModel, EmailStr, ConfigDict
+from typing import Optional, List
+from datetime import datetime
 
 class UserBase(BaseModel):
     first_name : str
@@ -69,3 +70,50 @@ class PlanResponse(BaseModel):
     status : Optional[bool] = True
     service : PlanServiceResponse
 
+class OrderBase(BaseModel):
+    plan_id : int
+    quantity : int = 1
+class OrderResponse(BaseModel):
+    id : int
+    total_amount : float
+    discount : float
+    status : str
+
+class OrderItems(BaseModel):
+    id : int
+    plan_id : int
+    service_name : str
+    duration_days : int
+    unit_price : float
+    quantity : int
+    model_config = ConfigDict(from_attributes=True)
+
+class OrderItemResponse(BaseModel):
+    id : int
+    total_amount : float
+    discount : float
+    status : str
+    items : List[OrderItems]
+    model_config = ConfigDict(from_attributes=True)
+
+class OrderItemUpdate(BaseModel):
+    quantity : int
+
+class TransactionResponse(BaseModel):
+    id : int
+    order_id : int
+    amount : float
+    gateway : str
+    track_code : str | None
+    status : str
+
+class PaymentTest(BaseModel):
+    success : bool
+
+class TransactionResponse(BaseModel):
+    id : int
+    amount : float
+    gateway : str
+    track_code : str | None
+    status : str
+    payment_time : datetime | None
