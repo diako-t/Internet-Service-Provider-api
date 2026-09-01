@@ -117,3 +117,19 @@ class TransactionResponse(BaseModel):
     track_code : str | None
     status : str
     payment_time : datetime | None
+
+class SubscriptionsResponse(BaseModel):
+    id : int
+    service_name : str
+    plan_id : int
+    duration_days : int
+    start_date : datetime
+    end_date : datetime
+    status : str
+    auto_renew : bool
+
+class SubscriptionsResponseAdmin(SubscriptionsResponse):
+    user_id : int
+
+class SubscriptionUpdate(BaseModel):
+    auto_renew : bool

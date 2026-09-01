@@ -95,7 +95,7 @@ class OrderItem(Base):
 
     plan = relationship("ServicePlan", back_populates="order_items")
     order = relationship("Order", back_populates="order_items")
-    subscriptions = relationship("Subscription", back_populates="order_item")
+    subscription = relationship("Subscription", back_populates="order_item", uselist=False)
 
 class Transaction(Base):
     __tablename__ = "transactions"
@@ -114,10 +114,10 @@ class Subscription(Base):
     __tablename__ = "subscriptions"
 
     id = Column(Integer, primary_key=True, nullable=False)
-    item_id = Column(Integer, ForeignKey("order_items.id"), nullable=False)
+    item_id = Column(Integer, ForeignKey("order_items.id"), nullable=False, unique=True)
     start_date = Column(TIMESTAMP(timezone=True), nullable=False)
     end_date = Column(TIMESTAMP(timezone=True), nullable=False)
     status = Column(String(50), default="active", nullable=False)
     auto_renew = Column(Boolean, default=False, nullable=False)
 
-    order_item = relationship("OrderItem", back_populates="subscriptions")
+    order_item = relationship("OrderItem", back_populates="subscription")
