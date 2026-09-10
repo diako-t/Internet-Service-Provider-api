@@ -4,10 +4,13 @@ from . import database, models, config
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
+import logging
 
 SECRET_KEY = config.setting.secret_key
 ALGORITHM = config.setting.algorithm
 ACCESS_TOKEN_EXPIRE_MINUTES = config.setting.access_token_expire_minutes
+
+logger = logging.getLogger(__name__)
 
 def create_access_token(data: dict):
     payload = data.copy()
@@ -21,6 +24,7 @@ def verify_access_token(token : str, credentials_exception):
         payload = jwt.decode(token, SECRET_KEY, algorithms=ALGORITHM)
         id = payload.get("id")
     except JWTError:
+        logger.warning("Invalid or expired token received")
         raise credentials_exception
     return id
 
@@ -29,10 +33,12 @@ def get_current_user(token: str = Depends(OAuth2PasswordBearer(tokenUrl="login")
     id = verify_access_token(token, credentials_exception)
     user = db.query(models.User).filter(models.User.id == id).first()
     if not user:
+        logger.warning("Token was valid but no user found with id=%s", id)
         raise credentials_exception
     return user
 
 def get_current_admin(current_user : models.User = Depends(get_current_user)):
     if current_user.role.lower() != "admin":
+        logger.warning("Unauthorized admin access attempt: user_id=%s | role=%s", current_user.id, current_user.role)
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="admin access required")
     return current_user

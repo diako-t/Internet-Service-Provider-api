@@ -2,8 +2,10 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.orm import Session
 from .. import models, database, oauth2, schemas
 from typing import Optional, List
+import logging
 
 router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
+logger = logging.getLogger(__name__)
 
 @router.get("/admin", response_model=List[schemas.SubscriptionsResponseAdmin])
 def get_subscriptions_by_admin(user_id : Optional[int] = None, active : Optional[str] = None, limit : int = 10, offset : int =0, db : Session = Depends(database.get_db), current_admin : models.User = Depends(oauth2.get_current_admin)):
@@ -46,11 +48,17 @@ def subscription_update(subscription_id : int, data : schemas.SubscriptionUpdate
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="subscription not found")
     if subscription.status.lower() != "active":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="subscription is not active")
-    subscription.auto_renew = data.auto_renew
-    db.commit()
-    db.refresh(subscription)
-    item = subscription.order_item
-    return {"id":subscription.id, "service_name":item.plan.service.name, "plan_id":item.plan_id, "total_traffic":subscription.total_traffic, "start_date":subscription.start_date, "end_date":subscription.end_date, "status":subscription.status, "auto_renew":subscription.auto_renew}
+    try:
+        subscription.auto_renew = data.auto_renew
+        db.commit()
+        db.refresh(subscription)
+        logger.info("Subscription updated: subscription_id=%s | auto_renew=%s | user_id=%s", subscription.id, subscription.auto_renew, current_user.id)
+        item = subscription.order_item
+        return {"id":subscription.id, "service_name":item.plan.service.name, "plan_id":item.plan_id, "total_traffic":subscription.total_traffic, "start_date":subscription.start_date, "end_date":subscription.end_date, "status":subscription.status, "auto_renew":subscription.auto_renew}
+    except Exception:
+        db.rollback()
+        logger.exception("Subscription update failed: subscription_id=%s | user_id=%s", subscription.id, current_user.id)
+        raise
 
 @router.patch("/{subscription_id}/cancel", response_model=schemas.SubscriptionsResponse)
 def subscription_delete(subscription_id : int, db : Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
@@ -59,9 +67,15 @@ def subscription_delete(subscription_id : int, db : Session = Depends(database.g
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="subscription not found")
     if subscription.status.lower() != "active":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="subscription is not active")
-    subscription.status = "cancelled"
-    subscription.auto_renew = False
-    db.commit()
-    db.refresh(subscription)
-    item = subscription.order_item
-    return {"id":subscription.id, "service_name":item.plan.service.name, "plan_id":item.plan_id, "total_traffic":subscription.total_traffic, "start_date":subscription.start_date, "end_date":subscription.end_date, "status":subscription.status, "auto_renew":subscription.auto_renew}
+    try:
+        subscription.status = "cancelled"
+        subscription.auto_renew = False
+        db.commit()
+        db.refresh(subscription)
+        logger.warning("Subscription cancelled: subscription_id=%s | user_id=%s", subscription.id, current_user.id)
+        item = subscription.order_item
+        return {"id":subscription.id, "service_name":item.plan.service.name, "plan_id":item.plan_id, "total_traffic":subscription.total_traffic, "start_date":subscription.start_date, "end_date":subscription.end_date, "status":subscription.status, "auto_renew":subscription.auto_renew}
+    except Exception:
+        db.rollback()
+        logger.exception("Subscription cancellation failed: subscription_id=%s | user_id=%s", subscription.id, current_user.id)
+        raise

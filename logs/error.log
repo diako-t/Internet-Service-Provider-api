@@ -1,0 +1,4 @@
+26-09-09 13:42:16 | ERROR | project.middleware | Response encountered an error: GET /auth/me | status=401 | process_time=0.238
+26-09-09 13:43:19 | ERROR | project.middleware | Response encountered an error: GET /favicon.ico | status=404 | process_time=0.003
+26-09-09 13:43:24 | ERROR | project.middleware | Response encountered an error: GET /doc | status=404 | process_time=0.001
+26-09-09 13:49:39 | ERROR | project.middleware | Response encountered an error: POST /categories/ | status=401 | process_time=0.934

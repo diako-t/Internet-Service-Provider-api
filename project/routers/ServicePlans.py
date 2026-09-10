@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status, Response
 from .. import schemas, database, models, oauth2
 from typing import List
 from sqlalchemy.orm import Session
+import logging
 
 router = APIRouter(prefix="/plans", tags=["service_plans"])
+logger = logging.getLogger(__name__)
 
 @router.get("/", response_model=List[schemas.PlanResponse])
 def get_plans(limit: int=10, skip: int=0, db: Session = Depends(database.get_db)):
@@ -21,30 +23,52 @@ def get_plan(id: int, db: Session = Depends(database.get_db)):
 def create_plan(data: schemas.PlanBase, db: Session = Depends(database.get_db), current_admin : models.User = Depends(oauth2.get_current_admin)):
     service = db.query(models.Service).filter(models.Service.id == data.service_id).first()
     if not service:
+        logger.info("Plan creation failed: service_id=%s not found | admin_id=%s", data.service_id, current_admin.id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found")
     new_plan = models.ServicePlan(**data.model_dump())
-    db.add(new_plan)
-    db.commit()
-    db.refresh(new_plan)
-    return new_plan
+    try:
+        db.add(new_plan)
+        db.commit()
+        db.refresh(new_plan)
+        logger.info("Plan created: plan_id=%s | service_name=%s | admin_id=%s", new_plan.id, service.name, current_admin.id)
+        return new_plan
+    except Exception:
+        db.rollback()
+        logger.exception("Plan creation failed: admin_id=%s", current_admin.id)
+        raise
 
 @router.put("/{id}", response_model=schemas.PlanResponse)
 def update_plan(id :int, data: schemas.PlanBase, db: Session = Depends(database.get_db), current_admin : models.User = Depends(oauth2.get_current_admin)):
     service = db.query(models.Service).filter(models.Service.id == data.service_id).first()
     if not service:
+        logger.info("Plan update failed: service_id=%s not found | admin_id=%s", data.service_id, current_admin.id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found")
     plan_query = db.query(models.ServicePlan).filter(models.ServicePlan.id == id)
-    if not plan_query.first():
+    plan = plan_query.first()
+    if not plan:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-    plan_query.update(data.model_dump(), synchronize_session=False)
-    db.commit()
-    return plan_query.first()
+    try:
+        plan_query.update(data.model_dump(), synchronize_session=False)
+        db.commit()
+        logger.info("Plan updated: plan_id=%s | admin_id=%s", plan.id, current_admin.id)
+        return plan_query.first()
+    except Exception:
+        db.rollback()
+        logger.exception("Plan update failed: plan_id=%s | admin_id=%s", id, current_admin.id)
+        raise
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_plan(id: int, db: Session = Depends(database.get_db), current_admin : models.User = Depends(oauth2.get_current_admin)):
     plan_query = db.query(models.ServicePlan).filter(models.ServicePlan.id == id)
-    if not plan_query.first():
+    plan = plan_query.first()
+    if not plan:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-    plan_query.delete(synchronize_session=False)
-    db.commit()
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    try:
+        plan_query.delete(synchronize_session=False)
+        db.commit()
+        logger.warning("Plan deleted: plan_id=%s | service_id=%s | admin_id=%s", id, plan.service.name, current_admin.id)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except Exception:
+        db.rollback()
+        logger.exception("Plan deletion failed: plan_id=%s | admin_id=%s", id, current_admin.id)
+        raise

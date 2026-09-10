@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status, Response
 from .. import schemas, database, models, oauth2
 from typing import List
 from sqlalchemy.orm import Session
+import logging
 
 router = APIRouter(prefix="/categories", tags=["categories"])
+logger = logging.getLogger(__name__)
 
 @router.get("/", response_model=List[schemas.CategoryResponse])
 def get_categories(limit: int=10, skip: int=0, search: str="", db: Session = Depends(database.get_db)):
@@ -20,25 +22,45 @@ def get_category(id: int, db: Session = Depends(database.get_db)):
 @router.post("/", response_model=schemas.CategoryResponse)
 def create_category(data: schemas.CategoryBase, db: Session = Depends(database.get_db), current_admin : models.User = Depends(oauth2.get_current_admin)):
     new_category = models.Category(**data.model_dump())
-    db.add(new_category)
-    db.commit()
-    db.refresh(new_category)
-    return new_category
+    try:
+        db.add(new_category)
+        db.commit()
+        db.refresh(new_category)
+        logger.info("Category created: category_id=%s | name=%s | admin_id=%s", new_category.id, new_category.name, current_admin.id)
+        return new_category
+    except Exception:
+        db.rollback()
+        logger.exception("Category creation failed: admin_id=%s", current_admin.id)
+        raise
 
 @router.put("/{id}", response_model=schemas.CategoryResponse)
 def update_category(id: int, data: schemas.CategoryBase, db: Session = Depends(database.get_db), current_admin : models.User = Depends(oauth2.get_current_admin)):
     category_query = db.query(models.Category).filter(models.Category.id == id)
     if not category_query.first():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="category not found")
-    category_query.update(data.model_dump(), synchronize_session=False)
-    db.commit()
-    return category_query.first()
+    try:
+        category_query.update(data.model_dump(), synchronize_session=False)
+        db.commit()
+        logger.info("Category updated: category_id=%s | admin_id=%s", id, current_admin.id)
+        return category_query.first()
+    except Exception:
+        db.rollback()
+        logger.exception("Category update failed: category_id=%s | admin_id=%s", id, current_admin.id)
+        raise    
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_category(id: int, db: Session = Depends(database.get_db), current_admin : models.User = Depends(oauth2.get_current_admin)):
     category_query = db.query(models.Category).filter(models.Category.id == id)
-    if not category_query.first():
+    category = category_query.first()
+    if not category:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="category not found")
-    category_query.delete(synchronize_session=False)
-    db.commit()
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    name = category.name
+    try:
+        category_query.delete(synchronize_session=False)
+        db.commit()
+        logger.warning("Category deleted: category_id=%s | name=%s | admin_id=%s", id, name, current_admin.id)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except Exception:
+        db.rollback()
+        logger.exception("Category deletion failed: category_id=%s | admin_id=%s", id, current_admin.id)
+        raise
