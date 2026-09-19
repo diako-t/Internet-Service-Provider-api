@@ -8,7 +8,7 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 logger = logging.getLogger(__name__)
 
 @router.post("/signup", response_model=schemas.UserResponse)
-def create_user(data: schemas.UserBase, db: Session = Depends(database.get_db)):
+def create_user(data: schemas.UserCreate, db: Session = Depends(database.get_db)):
     existing_user = db.query(models.User).filter(models.User.phone_number == data.phone_number).first()
     if existing_user:
         logger.warning("Signup attempt with already registered phone_number=%s", data.phone_number)
@@ -35,16 +35,17 @@ def login_user(credentials : OAuth2PasswordRequestForm = Depends(), db: Session 
     if not utils.verify_password(credentials.password, user.password):
         logger.warning("Failed login attempt (wrong password): user_id=%s", user.id)
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="invalid credentials")
-    access_token = oauth2.create_access_token({"id":user.id, "phone":user.phone_number})
+    access_token = oauth2.create_access_token({"id":user.id, "phone_number":user.phone_number})
+    refresh_token = oauth2.create_refresh_token({"id":user.id, "phone_number":user.phone_number})
     logger.info("User logged in: user_id=%s", user.id)
-    return {"access_token" : access_token, "token_type" : "bearer"}
+    return {"access_token" : access_token, "refresh_token" : refresh_token, "token_type" : "bearer"}
 
 @router.get("/me", response_model=schemas.UserResponse)
 def get_me(current_user : models.User = Depends(oauth2.get_current_user)):
     return current_user
 
 @router.post("/admin", response_model=schemas.AdminResponse)
-def create_admin(data: schemas.AdminBase, db: Session = Depends(database.get_db), current_admin: models.User = Depends(oauth2.get_current_admin)):
+def create_admin(data: schemas.AdminCreate, db: Session = Depends(database.get_db), current_admin: models.User = Depends(oauth2.get_current_admin)):
     existing_user = db.query(models.User).filter(models.User.phone_number == data.phone_number).first()
     if existing_user:
         logger.warning("Admin creation attempt with already registered phone_number=%s", data.phone_number)
@@ -68,3 +69,16 @@ def create_admin(data: schemas.AdminBase, db: Session = Depends(database.get_db)
     except Exception:
         db.rollback()
         logger.exception("New admin creation failed: created_by=%s", current_admin.id)
+
+@router.post("/refresh", response_model=schemas.Token)
+def refresh_access_token(refresh_token : schemas.RefreshToken, db : Session = Depends(database.get_db)):
+    credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid refresh token")
+    user_id = oauth2.verify_refresh_token(refresh_token.refresh_token, credentials_exception)
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        logger.warning("Refresh token belongs to non-existing user: user_id=%s", user_id)
+        raise credentials_exception
+    new_access_token = oauth2.create_access_token({"id":user.id, "phone_number":user.phone_number})
+    new_refresh_token = oauth2.create_refresh_token({"id":user.id, "phone_number":user.phone_number})
+    logger.info("Access token refreshed: user_id=%s", user.id)
+    return {"access_token" : new_access_token, "refresh_token" : new_refresh_token, "token_type":"bearer"}

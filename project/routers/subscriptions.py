@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Query, Path
 from sqlalchemy.orm import Session
 from .. import models, database, oauth2, schemas
 from typing import Optional, List
@@ -8,7 +8,7 @@ router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
 logger = logging.getLogger(__name__)
 
 @router.get("/admin", response_model=List[schemas.SubscriptionsResponseAdmin])
-def get_subscriptions_by_admin(user_id : Optional[int] = None, active : Optional[str] = None, limit : int = 10, offset : int =0, db : Session = Depends(database.get_db), current_admin : models.User = Depends(oauth2.get_current_admin)):
+def get_subscriptions_by_admin(user_id: int=Query(None, gt=0), active : Optional[schemas.SubscriptionStatus] = None, limit: int=Query(10, gt=0), offset: int=Query(0, ge=0), db : Session = Depends(database.get_db), current_admin : models.User = Depends(oauth2.get_current_admin)):
     query = db.query(models.Subscription).join(models.OrderItem).join(models.Order)
     if user_id is not None:
         query = query.filter(models.Order.user_id == user_id)
@@ -22,7 +22,7 @@ def get_subscriptions_by_admin(user_id : Optional[int] = None, active : Optional
     return result
 
 @router.get("/", response_model=List[schemas.SubscriptionsResponse])
-def get_subscriptions(active : Optional[str] = None, db : Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
+def get_subscriptions(active : Optional[schemas.SubscriptionStatus] = None, db : Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
     subscriptions = db.query(models.Subscription).join(models.OrderItem).join(models.Order).filter(models.Order.user_id == current_user.id)
     if active is not None:
         subscriptions = subscriptions.filter(models.Subscription.status == active)
@@ -34,7 +34,7 @@ def get_subscriptions(active : Optional[str] = None, db : Session = Depends(data
     return result
 
 @router.get("/{subscription_id}", response_model=schemas.SubscriptionsResponse)
-def get_subscription(subscription_id : int, db : Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
+def get_subscription(subscription_id : int=Path(gt=0), db : Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
     subscription = db.query(models.Subscription).join(models.OrderItem).join(models.Order).filter(models.Order.user_id == current_user.id, models.Subscription.id == subscription_id).first()
     if not subscription:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="subscription not found")
@@ -42,7 +42,7 @@ def get_subscription(subscription_id : int, db : Session = Depends(database.get_
     return {"id":subscription.id, "service_name":item.plan.service.name, "plan_id":item.plan_id, "total_traffic":subscription.total_traffic, "start_date":subscription.start_date, "end_date":subscription.end_date, "status":subscription.status, "auto_renew":subscription.auto_renew}
 
 @router.patch("/{subscription_id}", response_model=schemas.SubscriptionsResponse)
-def subscription_update(subscription_id : int, data : schemas.SubscriptionUpdate, db : Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
+def subscription_update(data : schemas.SubscriptionUpdate, subscription_id : int=Path(gt=0), db : Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
     subscription = db.query(models.Subscription).join(models.OrderItem).join(models.Order).filter(models.Order.user_id == current_user.id, models.Subscription.id == subscription_id).first()
     if not subscription:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="subscription not found")
@@ -61,7 +61,7 @@ def subscription_update(subscription_id : int, data : schemas.SubscriptionUpdate
         raise
 
 @router.patch("/{subscription_id}/cancel", response_model=schemas.SubscriptionsResponse)
-def subscription_delete(subscription_id : int, db : Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
+def subscription_delete(subscription_id : int=Path(gt=0), db : Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
     subscription = db.query(models.Subscription).join(models.OrderItem).join(models.Order).filter(models.Order.user_id == current_user.id, models.Subscription.id == subscription_id).first()
     if not subscription:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="subscription not found")

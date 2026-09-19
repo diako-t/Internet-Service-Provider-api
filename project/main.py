@@ -1,8 +1,15 @@
 from .logging_config import setup_logging
 setup_logging()
 
+from contextlib import asynccontextmanager
+@asynccontextmanager
+async def lifespan(app:FastAPI):
+    print("Application startup")
+    yield
+    print("Application shutdown")
+
 from fastapi import FastAPI
-app = FastAPI()
+app = FastAPI(lifespan=lifespan, title="internet service provider", version="1.0.0")
 
 from .middleware import log_requests
 app.middleware("http")(log_requests)

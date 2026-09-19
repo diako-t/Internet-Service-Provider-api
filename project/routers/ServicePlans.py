@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Path, Query
 from .. import schemas, database, models, oauth2
 from typing import List
 from sqlalchemy.orm import Session
@@ -8,19 +8,19 @@ router = APIRouter(prefix="/plans", tags=["service_plans"])
 logger = logging.getLogger(__name__)
 
 @router.get("/", response_model=List[schemas.PlanResponse])
-def get_plans(limit: int=10, skip: int=0, db: Session = Depends(database.get_db)):
+def get_plans(limit: int=Query(10, gt=0), skip: int=Query(0, ge=0), db: Session = Depends(database.get_db)):
     plans = db.query(models.ServicePlan).limit(limit).offset(skip).all()
     return plans
 
 @router.get("/{id}", response_model=schemas.PlanResponse)
-def get_plan(id: int, db: Session = Depends(database.get_db)):
+def get_plan(id: int=Path(gt=0), db: Session = Depends(database.get_db)):
     plan = db.query(models.ServicePlan).filter(models.ServicePlan.id == id).first()
     if not plan:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
     return plan
 
 @router.post("/", response_model=schemas.PlanResponse)
-def create_plan(data: schemas.PlanBase, db: Session = Depends(database.get_db), current_admin : models.User = Depends(oauth2.get_current_admin)):
+def create_plan(data: schemas.PlanCreate, db: Session = Depends(database.get_db), current_admin : models.User = Depends(oauth2.get_current_admin)):
     service = db.query(models.Service).filter(models.Service.id == data.service_id).first()
     if not service:
         logger.info("Plan creation failed: service_id=%s not found | admin_id=%s", data.service_id, current_admin.id)
@@ -38,7 +38,7 @@ def create_plan(data: schemas.PlanBase, db: Session = Depends(database.get_db), 
         raise
 
 @router.put("/{id}", response_model=schemas.PlanResponse)
-def update_plan(id :int, data: schemas.PlanBase, db: Session = Depends(database.get_db), current_admin : models.User = Depends(oauth2.get_current_admin)):
+def update_plan(data: schemas.PlanCreate, id: int=Path(gt=0), db: Session = Depends(database.get_db), current_admin : models.User = Depends(oauth2.get_current_admin)):
     service = db.query(models.Service).filter(models.Service.id == data.service_id).first()
     if not service:
         logger.info("Plan update failed: service_id=%s not found | admin_id=%s", data.service_id, current_admin.id)
@@ -58,7 +58,7 @@ def update_plan(id :int, data: schemas.PlanBase, db: Session = Depends(database.
         raise
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_plan(id: int, db: Session = Depends(database.get_db), current_admin : models.User = Depends(oauth2.get_current_admin)):
+def delete_plan(id: int=Path(gt=0), db: Session = Depends(database.get_db), current_admin : models.User = Depends(oauth2.get_current_admin)):
     plan_query = db.query(models.ServicePlan).filter(models.ServicePlan.id == id)
     plan = plan_query.first()
     if not plan:

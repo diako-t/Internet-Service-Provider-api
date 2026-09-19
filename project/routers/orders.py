@@ -1,14 +1,14 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Response
+from fastapi import APIRouter, HTTPException, status, Depends, Path, Query
 from sqlalchemy.orm import Session
 from .. import schemas, database, oauth2, models
-from typing import List, Optional
+from typing import List
 import logging
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 logger = logging.getLogger(__name__)
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.OrderResponse)
-def create_cart(data : schemas.OrderBase, db : Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
+def create_cart(data : schemas.OrderCreate, db : Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
     plan = db.query(models.ServicePlan).filter(data.plan_id == models.ServicePlan.id).first()
     if not plan:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
@@ -40,7 +40,7 @@ def create_cart(data : schemas.OrderBase, db : Session = Depends(database.get_db
         logger.exception("adding item failed: plan_id=%s | user_id=%s", plan.id, current_user.id)
         raise
 
-@router.get("/cart", response_model=schemas.OrderItemResponse)
+@router.get("/cart", response_model=schemas.OrderItemsResponse)
 def get_cart(db : Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
     order = db.query(models.Order).filter(models.Order.user_id == current_user.id, models.Order.status == "pending").first()
     if not order:
@@ -51,7 +51,7 @@ def get_cart(db : Session = Depends(database.get_db), current_user : models.User
     return {"id":order.id, "total_amount":order.total_amount, "discount":order.discount, "status":order.status, "items":items}
 
 @router.put("/items/{item_id}", response_model=schemas.OrderResponse)
-def update_items(item_id : int, data : schemas.OrderItemUpdate, db :Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
+def update_items(data : schemas.OrderItemUpdate, item_id: int=Path(gt=0), db :Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
     if data.quantity <= 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="quantity must be at least 1")
     order_item = db.query(models.OrderItem).join(models.Order).filter(models.Order.user_id == current_user.id, models.OrderItem.id == item_id, models.Order.status == "pending").first()
@@ -73,7 +73,7 @@ def update_items(item_id : int, data : schemas.OrderItemUpdate, db :Session = De
         raise
 
 @router.delete("/items/{item_id}", response_model=schemas.OrderResponse)
-def delete_items(item_id : int, db :Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
+def delete_items(item_id: int=Path(gt=0), db :Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
     order_item = db.query(models.OrderItem).join(models.Order).filter(models.Order.user_id == current_user.id, models.OrderItem.id == item_id, models.Order.status == "pending").first()
     if not order_item:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="order item not found")
@@ -108,8 +108,8 @@ def delete_cart(db :Session = Depends(database.get_db), current_user : models.Us
         raise
 
 
-@router.get("/admin", response_model=List[schemas.OrderItemResponse])
-def get_orders_by_admin(user_id : Optional[int] = None, limit : int = 10, offset : int = 0, db: Session = Depends(database.get_db), current_admin : models.User = Depends(oauth2.get_current_admin)):
+@router.get("/admin", response_model=List[schemas.OrderItemsResponse])
+def get_orders_by_admin(user_id: int=Query(None, gt=0), limit: int=Query(10, gt=0), offset: int=Query(0, ge=0), db: Session = Depends(database.get_db), current_admin : models.User = Depends(oauth2.get_current_admin)):
     query = db.query(models.Order)
     if user_id is not None:
         user = db.query(models.User).filter(models.User.id == user_id).first()
@@ -125,7 +125,7 @@ def get_orders_by_admin(user_id : Optional[int] = None, limit : int = 10, offset
         result.append({"id":order.id, "total_amount":order.total_amount, "discount":order.discount, "status":order.status, "items":items})
     return result
 
-@router.get("/", response_model=List[schemas.OrderItemResponse])
+@router.get("/", response_model=List[schemas.OrderItemsResponse])
 def get_orders(db :Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
     orders = db.query(models.Order).filter(models.Order.user_id == current_user.id).all()
     result = []
@@ -136,8 +136,8 @@ def get_orders(db :Session = Depends(database.get_db), current_user : models.Use
         result.append({"id":order.id, "total_amount":order.total_amount, "discount":order.discount, "status":order.status, "items":items})
     return result
 
-@router.get("/{order_id}", response_model=schemas.OrderItemResponse)
-def get_order(order_id : int, db :Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
+@router.get("/{order_id}", response_model=schemas.OrderItemsResponse)
+def get_order(order_id: int=Path(gt=0), db :Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
     order = db.query(models.Order).filter(models.Order.user_id == current_user.id, models.Order.id == order_id).first()
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="order not found")
@@ -147,7 +147,7 @@ def get_order(order_id : int, db :Session = Depends(database.get_db), current_us
     return {"id":order.id, "total_amount":order.total_amount, "discount":order.discount, "status":order.status, "items":items}
 
 @router.post("/{order_id}/checkout", response_model=schemas.TransactionResponse)
-def checkout(order_id : int, db : Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
+def checkout(order_id: int=Path(gt=0), db : Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
     order = db.query(models.Order).filter(models.Order.user_id == current_user.id, models.Order.id == order_id, models.Order.status == "pending").first()
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="order not found")

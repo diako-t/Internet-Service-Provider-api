@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Path, Query
 from sqlalchemy.orm import Session
 from .. import models, database, oauth2, schemas
-from typing import List, Optional
+from typing import List
 import uuid
 from datetime import datetime, timezone, timedelta
 import logging
@@ -10,7 +10,7 @@ router = APIRouter(prefix="/transactions", tags=["transactions"])
 logger = logging.getLogger(__name__)
 
 @router.get("/admin", response_model=List[schemas.TransactionResponse])
-def get_transaction_by_admin(user_id : Optional[int] = None, limit : int = 10, offset : int = 0, db : Session = Depends(database.get_db), current_admin : models.User = Depends(oauth2.get_current_admin)):
+def get_transaction_by_admin(user_id: int=Query(None, gt=0), limit: int=Query(10, gt=0), offset: int=Query(0, ge=0), db : Session = Depends(database.get_db), current_admin : models.User = Depends(oauth2.get_current_admin)):
     query = db.query(models.Transaction)
     if user_id is not None:
         query = query.join(models.Order).filter(models.Order.user_id == user_id)
@@ -23,14 +23,14 @@ def get_transactions(db : Session = Depends(database.get_db), current_user : mod
     return transactions
 
 @router.get("/{transaction_id}" ,response_model=schemas.TransactionResponse)
-def get_transaction(transaction_id : int, db : Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
+def get_transaction(transaction_id: int=Path(gt=0), db : Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
     transaction = db.query(models.Transaction).join(models.Order).filter(models.Order.user_id == current_user.id, models.Transaction.id == transaction_id).first()
     if not transaction:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="transaction not found")
     return transaction
 
 @router.post("/{transaction_id}/pay", response_model=schemas.TransactionResponse)
-def test_payment(transaction_id : int, data : schemas.PaymentTest, db : Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
+def test_payment(data: schemas.PaymentTest, transaction_id : int=Path(gt=0) ,db : Session = Depends(database.get_db), current_user : models.User = Depends(oauth2.get_current_user)):
     transaction = db.query(models.Transaction).join(models.Order).filter(models.Order.user_id == current_user.id, models.Transaction.id == transaction_id).first()
     if not transaction:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="transaction not found")
