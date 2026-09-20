@@ -58,6 +58,7 @@ class User(Base):
 
     admin = relationship("Admin", back_populates="user", uselist=False)
     orders = relationship("Order", back_populates="user")
+    tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
 
 class Admin(Base):
     __tablename__ = "admins"
@@ -123,3 +124,15 @@ class Subscription(Base):
     auto_renew = Column(Boolean, default=False, nullable=False)
 
     order_item = relationship("OrderItem", back_populates="subscription")
+
+class RefreshToken(Base):
+    __tablename__ = "refresh_token"
+
+    id = Column(Integer, primary_key=True)
+    jti = Column(String, unique=True, index=True, nullable=False)
+    family_id = Column(String, index=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    expires_at = Column(TIMESTAMP(timezone=True), nullable=False)
+    revoked_at = Column(TIMESTAMP(timezone=True), nullable=True)
+
+    user = relationship("User", back_populates="tokens")

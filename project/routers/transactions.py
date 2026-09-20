@@ -51,15 +51,15 @@ def test_payment(data: schemas.PaymentTest, transaction_id : int=Path(gt=0) ,db 
                 db.add(sub)
             order.status = "completed"
             db.commit()
-            logger.info("Payment successful: transaction_id=%s | user_id=%s | track_code=%s", transaction.id, current_user.id, transaction.track_code)
+            logger.info("Payment successful | transaction_id=%s | user_id=%s | track_code=%s", transaction.id, current_user.id, transaction.track_code)
         else:
             transaction.status = "failed"
             transaction.payment_time = datetime.now(timezone.utc)
             db.commit()
-            logger.info("Payment failed: transaction_id=%s | order_id=%s | user_id=%s", transaction.id, order.id, current_user.id)
+            logger.info("Payment failed | transaction_id=%s | order_id=%s | user_id=%s", transaction.id, order.id, current_user.id)
         db.refresh(transaction)
         return transaction
     except Exception:
         db.rollback()  
-        logger.exception("Payment processing failed: transaction_id=%s | user_id=%s", transaction.id, current_user.id)
+        logger.exception("Payment processing failed | transaction_id=%s | user_id=%s", transaction.id, current_user.id)
         raise

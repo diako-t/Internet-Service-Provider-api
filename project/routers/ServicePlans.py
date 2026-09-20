@@ -30,11 +30,11 @@ def create_plan(data: schemas.PlanCreate, db: Session = Depends(database.get_db)
         db.add(new_plan)
         db.commit()
         db.refresh(new_plan)
-        logger.info("Plan created: plan_id=%s | service_name=%s | admin_id=%s", new_plan.id, service.name, current_admin.id)
+        logger.info("Plan created | plan_id=%s | service_name=%s | admin_id=%s", new_plan.id, service.name, current_admin.id)
         return new_plan
     except Exception:
         db.rollback()
-        logger.exception("Plan creation failed: admin_id=%s", current_admin.id)
+        logger.exception("Plan creation failed | admin_id=%s", current_admin.id)
         raise
 
 @router.put("/{id}", response_model=schemas.PlanResponse)
@@ -50,11 +50,11 @@ def update_plan(data: schemas.PlanCreate, id: int=Path(gt=0), db: Session = Depe
     try:
         plan_query.update(data.model_dump(), synchronize_session=False)
         db.commit()
-        logger.info("Plan updated: plan_id=%s | admin_id=%s", plan.id, current_admin.id)
+        logger.info("Plan updated | plan_id=%s | admin_id=%s", plan.id, current_admin.id)
         return plan_query.first()
     except Exception:
         db.rollback()
-        logger.exception("Plan update failed: plan_id=%s | admin_id=%s", id, current_admin.id)
+        logger.exception("Plan update failed | plan_id=%s | admin_id=%s", id, current_admin.id)
         raise
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -66,9 +66,9 @@ def delete_plan(id: int=Path(gt=0), db: Session = Depends(database.get_db), curr
     try:
         plan_query.delete(synchronize_session=False)
         db.commit()
-        logger.warning("Plan deleted: plan_id=%s | service_id=%s | admin_id=%s", id, plan.service.name, current_admin.id)
+        logger.warning("Plan deleted | plan_id=%s | service_id=%s | admin_id=%s", id, plan.service.name, current_admin.id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception:
         db.rollback()
-        logger.exception("Plan deletion failed: plan_id=%s | admin_id=%s", id, current_admin.id)
+        logger.exception("Plan deletion failed | plan_id=%s | admin_id=%s", id, current_admin.id)
         raise

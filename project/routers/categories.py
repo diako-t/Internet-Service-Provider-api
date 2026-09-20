@@ -26,11 +26,11 @@ def create_category(data: schemas.CategoryCreate, db: Session = Depends(database
         db.add(new_category)
         db.commit()
         db.refresh(new_category)
-        logger.info("Category created: category_id=%s | name=%s | admin_id=%s", new_category.id, new_category.name, current_admin.id)
+        logger.info("Category created | category_id=%s | name=%s | admin_id=%s", new_category.id, new_category.name, current_admin.id)
         return new_category
     except Exception:
         db.rollback()
-        logger.exception("Category creation failed: admin_id=%s", current_admin.id)
+        logger.exception("Category creation failed | admin_id=%s", current_admin.id)
         raise
 
 @router.put("/{id}", response_model=schemas.CategoryResponse)
@@ -41,11 +41,11 @@ def update_category(data: schemas.CategoryCreate, id: int=Path(gt=0), db: Sessio
     try:
         category_query.update(data.model_dump(), synchronize_session=False)
         db.commit()
-        logger.info("Category updated: category_id=%s | admin_id=%s", id, current_admin.id)
+        logger.info("Category updated | category_id=%s | admin_id=%s", id, current_admin.id)
         return category_query.first()
     except Exception:
         db.rollback()
-        logger.exception("Category update failed: category_id=%s | admin_id=%s", id, current_admin.id)
+        logger.exception("Category update failed | category_id=%s | admin_id=%s", id, current_admin.id)
         raise    
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -58,9 +58,9 @@ def delete_category(id: int=Path(gt=0), db: Session = Depends(database.get_db), 
     try:
         category_query.delete(synchronize_session=False)
         db.commit()
-        logger.warning("Category deleted: category_id=%s | name=%s | admin_id=%s", id, name, current_admin.id)
+        logger.warning("Category deleted | category_id=%s | name=%s | admin_id=%s", id, name, current_admin.id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception:
         db.rollback()
-        logger.exception("Category deletion failed: category_id=%s | admin_id=%s", id, current_admin.id)
+        logger.exception("Category deletion failed | category_id=%s | admin_id=%s", id, current_admin.id)
         raise

@@ -52,12 +52,12 @@ def subscription_update(data : schemas.SubscriptionUpdate, subscription_id : int
         subscription.auto_renew = data.auto_renew
         db.commit()
         db.refresh(subscription)
-        logger.info("Subscription updated: subscription_id=%s | auto_renew=%s | user_id=%s", subscription.id, subscription.auto_renew, current_user.id)
+        logger.info("Subscription updated | subscription_id=%s | auto_renew=%s | user_id=%s", subscription.id, subscription.auto_renew, current_user.id)
         item = subscription.order_item
         return {"id":subscription.id, "service_name":item.plan.service.name, "plan_id":item.plan_id, "total_traffic":subscription.total_traffic, "start_date":subscription.start_date, "end_date":subscription.end_date, "status":subscription.status, "auto_renew":subscription.auto_renew}
     except Exception:
         db.rollback()
-        logger.exception("Subscription update failed: subscription_id=%s | user_id=%s", subscription.id, current_user.id)
+        logger.exception("Subscription update failed | subscription_id=%s | user_id=%s", subscription.id, current_user.id)
         raise
 
 @router.patch("/{subscription_id}/cancel", response_model=schemas.SubscriptionsResponse)
@@ -72,10 +72,10 @@ def subscription_delete(subscription_id : int=Path(gt=0), db : Session = Depends
         subscription.auto_renew = False
         db.commit()
         db.refresh(subscription)
-        logger.warning("Subscription cancelled: subscription_id=%s | user_id=%s", subscription.id, current_user.id)
+        logger.warning("Subscription cancelled | subscription_id=%s | user_id=%s", subscription.id, current_user.id)
         item = subscription.order_item
         return {"id":subscription.id, "service_name":item.plan.service.name, "plan_id":item.plan_id, "total_traffic":subscription.total_traffic, "start_date":subscription.start_date, "end_date":subscription.end_date, "status":subscription.status, "auto_renew":subscription.auto_renew}
     except Exception:
         db.rollback()
-        logger.exception("Subscription cancellation failed: subscription_id=%s | user_id=%s", subscription.id, current_user.id)
+        logger.exception("Subscription cancellation failed | subscription_id=%s | user_id=%s", subscription.id, current_user.id)
         raise

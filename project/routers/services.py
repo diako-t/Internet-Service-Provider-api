@@ -30,11 +30,11 @@ def create_service(data: schemas.ServiceCreate, db: Session = Depends(database.g
         db.add(new_service)
         db.commit()
         db.refresh(new_service)
-        logger.info("Service created: service_id=%s | name=%s | admin_id=%s", new_service.id, new_service.name, current_admin.id)
+        logger.info("Service created | service_id=%s | name=%s | admin_id=%s", new_service.id, new_service.name, current_admin.id)
         return new_service
     except Exception:
         db.rollback()
-        logger.exception("Service creation failed: admin_id=%s", current_admin.id)
+        logger.exception("Service creation failed | admin_id=%s", current_admin.id)
         raise
 
 @router.put("/{id}", response_model=schemas.ServiceResponse)
@@ -49,11 +49,11 @@ def update_service(data: schemas.ServiceCreate, id: int=Path(gt=0), db: Session 
     try:
         service_query.update(data.model_dump(), synchronize_session=False)
         db.commit()
-        logger.info("Service updated: service_id=%s | admin_id=%s", id, current_admin.id)
+        logger.info("Service updated | service_id=%s | admin_id=%s", id, current_admin.id)
         return service_query.first()
     except Exception:
         db.rollback()
-        logger.exception("Service update failed: service_id=%s | admin_id=%s", id, current_admin.id)
+        logger.exception("Service update failed | service_id=%s | admin_id=%s", id, current_admin.id)
         raise
 
 
@@ -66,9 +66,9 @@ def delete_service(id: int=Path(gt=0), db: Session = Depends(database.get_db), c
     try:
         service_query.delete(synchronize_session=False)
         db.commit()
-        logger.warning("Service deleted: service_id=%s | name=%s | admin_id=%s", id, service.name, current_admin.id)
+        logger.warning("Service deleted | service_id=%s | name=%s | admin_id=%s", id, service.name, current_admin.id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception:
         db.rollback()
-        logger.exception("Service deletion failed: service_id=%s | admin_id=%s", id, current_admin.id)
+        logger.exception("Service deletion failed | service_id=%s | admin_id=%s", id, current_admin.id)
         raise

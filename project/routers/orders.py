@@ -33,11 +33,11 @@ def create_cart(data : schemas.OrderCreate, db : Session = Depends(database.get_
         order.total_amount = total_price - order.discount
         db.commit()
         db.refresh(order)
-        logger.info("item added to cart: order_id=%s | plan_id=%s | item_id=%s | user_id=%s", order.id, plan.id, order_item.id, current_user.id)
+        logger.info("item added to cart | order_id=%s | plan_id=%s | item_id=%s | user_id=%s", order.id, plan.id, order_item.id, current_user.id)
         return order
     except Exception:
         db.rollback()
-        logger.exception("adding item failed: plan_id=%s | user_id=%s", plan.id, current_user.id)
+        logger.exception("adding item failed | plan_id=%s | user_id=%s", plan.id, current_user.id)
         raise
 
 @router.get("/cart", response_model=schemas.OrderItemsResponse)
@@ -65,11 +65,11 @@ def update_items(data : schemas.OrderItemUpdate, item_id: int=Path(gt=0), db :Se
         order.total_amount = total_price - order.discount    
         db.commit()
         db.refresh(order)
-        logger.info("Order item updated: item_id=%s | new_quantity=%s | user_id=%s", item_id, data.quantity, current_user.id)
+        logger.info("Order item updated | item_id=%s | new_quantity=%s | user_id=%s", item_id, data.quantity, current_user.id)
         return order
     except Exception:
         db.rollback()
-        logger.exception("Order item update failed: item_id=%s | user_id=%s", item_id, current_user.id)
+        logger.exception("Order item update failed | item_id=%s | user_id=%s", item_id, current_user.id)
         raise
 
 @router.delete("/items/{item_id}", response_model=schemas.OrderResponse)
@@ -85,11 +85,11 @@ def delete_items(item_id: int=Path(gt=0), db :Session = Depends(database.get_db)
         order.total_amount = total_price - order.discount   
         db.commit()
         db.refresh(order)
-        logger.info("Order item deleted: item_id=%s | order_id=%s | user_id=%s", item_id, order.id, current_user.id)
+        logger.info("Order item deleted | item_id=%s | order_id=%s | user_id=%s", item_id, order.id, current_user.id)
         return order
     except Exception:
         db.rollback()
-        logger.exception("Order item deletion failed: item_id=%s | user_id=%s", item_id, current_user.id)
+        logger.exception("Order item deletion failed | item_id=%s | user_id=%s", item_id, current_user.id)
         raise
 
 @router.delete("/cart", status_code=status.HTTP_204_NO_CONTENT)
@@ -101,10 +101,10 @@ def delete_cart(db :Session = Depends(database.get_db), current_user : models.Us
     try:
         db.delete(order)
         db.commit()
-        logger.warning("Cart deleted: order_id=%s | user_id=%s", order_id, current_user.id)
+        logger.warning("Cart deleted | order_id=%s | user_id=%s", order_id, current_user.id)
     except Exception:
         db.rollback()
-        logger.exception("Cart deletion failed: order_id=%s | user_id=%s", order_id, current_user.id)
+        logger.exception("Cart deletion failed | order_id=%s | user_id=%s", order_id, current_user.id)
         raise
 
 
@@ -164,9 +164,9 @@ def checkout(order_id: int=Path(gt=0), db : Session = Depends(database.get_db), 
         db.add(transaction)
         db.commit()
         db.refresh(transaction)
-        logger.info("Checkout initiated: transaction_id=%s | order_id=%s | amount=%s | user_id=%s", transaction.id, order_id, transaction.amount, current_user.id)
+        logger.info("Checkout initiated | transaction_id=%s | order_id=%s | amount=%s | user_id=%s", transaction.id, order_id, transaction.amount, current_user.id)
         return transaction
     except Exception:
         db.rollback()
-        logger.exception("Checkout failed: order_id=%s | user_id=%s", order_id, current_user.id)
+        logger.exception("Checkout failed | order_id=%s | user_id=%s", order_id, current_user.id)
         raise
